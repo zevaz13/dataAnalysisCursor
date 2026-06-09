@@ -1,44 +1,44 @@
-# The Project Management MVP web app
+# EEG data analysis
 
-## Business Requirements
+## Folder structure
+dataAnalysisCursor/
+  data/
+    eeg/
+      raw/            # raw BCI2000 or other EEG files
+  src/
+    eeg/
+  scripts/
+    eeg/              #.py files 
+  notebooks/
+    eeg/              #.ipynb
+  configs/
+    eeg_preprocessing.yaml
+  docs/
+    EEG/
 
-This project is building a Project Management App. Key features:
-- A user can sign in
-- When signed in, the user sees a Kanban board representing their project
-- The Kanban board has fixed columns that can be renamed
-- The cards on the Kanban board can be moved with drag and drop, and edited
-- There is an AI chat feature in a sidebar; the AI is able to create / edit / move one or more cards
+## Requirements
 
-## Limitations
+Build a modular Python codebase for loading, preprocessing, visualizing, and analyzing EEG data using MNE-Python and python in general. Start small with a dummy dataset (BCI2000 format), then extend to more complex pipelines:
 
-For the MVP, there will only be a user sign in (hardcoded to 'user' and 'password') but the database will support multiple users for future.
-
-For the MVP, there will only be 1 Kanban board per signed in user.
-
-For the MVP, this will run locally (in a docker container)
+- user sets a path for raw data or data file name. 
+- we design functionalities to process that data and plot it at certains tages
+- Prefer small, modular functions over large scripts.
+- When adding new functionality, create a script in scripts/eeg/ that calls functions from src/eeg/.
+- Use MNE-Python idioms (Raw, Epochs, ICA, events, montages).
+- Always validate imports by printing: number of channels, sampling rate, channel names, montage (if available),event/stimulus channel
+- Always create a notebook for the user to test the code and outputs you create. for this use the notebooks/eeg directory
+- Always keep track of current working plan using a file called plan.md in the project root directory
 
 ## Technical Decisions
 
-- NextJS frontend
-- Python FastAPI backend, including serving the static NextJS site at /
-- Everything packaged into a Docker container
-- Use "uv" as the package manager for python in the Docker container
-- Use OpenRouter for the AI calls. An OPENROUTER_API_KEY is in .env in the project root
-- Use `openai/gpt-oss-120b` as the model
-- Use SQLLite local database for the database, creating a new db if it doesn't exist
-- Start and Stop server scripts for Mac, PC, Linux in scripts/
+- Use "uv" as the package manager for python
+- create a new virtual environment that adds the needed packages to check the data. mne, matplotlib, pandas etc..
+- create notebooks that allow the user to test functionality
+- The user should be able to explore data by themselves looking at the documentation and creating scripts or notebooks of their own
 
 ## Starting Point
 
-A working MVP of the frontend has been built and is already in frontend. This is not yet designed for the Docker setup. It's a pure frontend-only demo.
-
-## Color Scheme
-
-- Accent Yellow: `#ecad0a` - accent lines, highlights
-- Blue Primary: `#209dd7` - links, key sections
-- Purple Secondary: `#753991` - submit buttons, important actions
-- Dark Navy: `#032147` - main headings
-- Gray Text: `#888888` - supporting text, labels
+We are starting with an almost empty project folder, only with data/eeg/raw in it
 
 ## Coding standards
 
@@ -50,4 +50,14 @@ A working MVP of the frontend has been built and is already in frontend. This is
 ## Working documentation
 
 All documents for planning and executing this project will be in the docs/ directory.
-Please review the docs/PLAN.md document before proceeding.
+Please review plan.md in the project root before proceeding.
+
+## First milestone
+create a script scripts/eeg/load_and_inspect.py, and notebooks/eeg/load_and_inspect.ipynb that 
+1. Loads a bci2000 file from data/eeg/raw (uses mne.io.read_raw_bci2k to load the data)
+2. Converts it to an MNE Raw object
+3. prints metadata (channels, sfreq, events)
+4. plots:
+   - raw traces,
+   - stimulus channel
+   - PSD

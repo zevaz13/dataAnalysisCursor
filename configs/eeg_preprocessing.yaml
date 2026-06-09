@@ -1,0 +1,2 @@
+raw_dir: data/eeg/raw
+default_file: MET000bGridFixedS001R02.dat

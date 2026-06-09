@@ -1,0 +1,19 @@
+[project]
+name = "dataanalysiscursor"
+version = "0.1.0"
+description = "EEG data loading, preprocessing, and analysis with MNE-Python"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.2.0",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.9",
+    "mne>=1.12.1",
+    "pandas>=3.0.3",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

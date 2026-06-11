@@ -59,7 +59,45 @@ def plot_ica_components(
             for fig in figs:
                 fig.suptitle(f"IC {idx}  |  {label} ({prob:.0%})", fontsize=10)
         figures.extend(figs)
+    # plt.show() with the inline backend displays-and-closes all pending figures,
+    # preventing the post-cell flush_figures hook from rendering them a second time.
+    # Skip on Agg (scripts) where show() would warn and figures stay open for savefig.
+    if plt.get_backend().lower() != "agg":
+        plt.show()
     return figures
+
+
+def plot_before_after(
+    raw_before: mne.io.BaseRaw,
+    raw_after: mne.io.BaseRaw,
+    channel_names: list[str],
+    duration: float = 10.0,
+) -> plt.Figure:
+    """Two-column time-domain comparison: before ICA (left) vs after ICA (right)."""
+    n_ch = len(channel_names)
+    picks = [raw_before.ch_names.index(ch) for ch in channel_names]
+    n_samples = int(duration * raw_before.info["sfreq"])
+
+    data_before, times = raw_before[picks, :n_samples]
+    data_after, _ = raw_after[picks, :n_samples]
+
+    fig, axes = plt.subplots(n_ch, 2, figsize=(14, 0.9 * n_ch + 1), sharex=True)
+    if n_ch == 1:
+        axes = axes[None, :]  # ensure 2-D
+
+    for row, (ch_name, before, after) in enumerate(zip(channel_names, data_before, data_after)):
+        axes[row, 0].plot(times, before)
+        axes[row, 1].plot(times, after)
+        axes[row, 0].set_ylabel(ch_name, fontsize=8)
+        for col in range(2):
+            axes[row, col].tick_params(labelsize=7)
+
+    axes[0, 0].set_title("Before ICA", fontsize=9)
+    axes[0, 1].set_title("After ICA", fontsize=9)
+    axes[-1, 0].set_xlabel("Time (s)")
+    axes[-1, 1].set_xlabel("Time (s)")
+    fig.tight_layout()
+    return fig
 
 
 def plot_raw_traces(

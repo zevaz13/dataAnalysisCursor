@@ -2,8 +2,16 @@
 
 from eeg.io import load_bci2k
 from eeg.inspect import print_summary
-from eeg.preprocessing import bandpass_filter, label_components, rereference_average, run_ica
+from eeg.preprocessing import (
+    bandpass_filter,
+    label_components,
+    make_epochs,
+    remove_artifacts,
+    rereference_average,
+    run_ica,
+)
 from eeg.viz import (
+    plot_before_after,
     plot_channels,
     plot_channels_psd,
     plot_ica_components,
@@ -19,6 +27,9 @@ __all__ = [
     "rereference_average",
     "run_ica",
     "label_components",
+    "remove_artifacts",
+    "make_epochs",
+    "plot_before_after",
     "plot_channels",
     "plot_channels_psd",
     "plot_ica_components",

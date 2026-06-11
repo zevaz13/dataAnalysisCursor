@@ -50,3 +50,36 @@ def label_components(
 ) -> dict:
     """Run ICLabel on the fitted ICA and return the labels dict."""
     return mne_icalabel.label_components(raw, ica, method="iclabel")
+
+
+def remove_artifacts(
+    raw: mne.io.BaseRaw,
+    ica: mne.preprocessing.ICA,
+    labels: dict,
+    eye_threshold: float = 0.7,
+    muscle_threshold: float = 0.5,
+) -> tuple[mne.io.BaseRaw, list[int]]:
+    """Exclude artifact ICs and return a cleaned copy of raw plus the excluded indices."""
+    exclude = [
+        i
+        for i, (label, proba) in enumerate(zip(labels["labels"], labels["y_pred_proba"]))
+        if (label == "eye blink" and proba.max() > eye_threshold)
+        or (label == "muscle artifact" and proba.max() > muscle_threshold)
+    ]
+    ica.exclude = exclude
+    return ica.apply(raw.copy()), exclude
+
+
+def make_epochs(
+    raw: mne.io.BaseRaw,
+    tmin: float = 0.0,
+    tmax: float = 3.0,
+    event_id: int = 1,
+    baseline: tuple | None = None,
+) -> mne.Epochs:
+    """Create epochs locked to rising edges of STI 014, default 0–3 s."""
+    events = mne.find_events(raw, stim_channel="STI 014", shortest_event=1)
+    return mne.Epochs(
+        raw, events, event_id=event_id, tmin=tmin, tmax=tmax,
+        baseline=baseline, preload=True,
+    )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Full preprocessing pipeline: filter → reref → ICA → ICLabel → component plots."""
+"""Full preprocessing pipeline: filter → reref → ICA → ICLabel → artifact removal → epochs."""
 
 import argparse
 import json
@@ -11,12 +11,20 @@ import matplotlib.pyplot as plt
 
 from eeg.inspect import print_summary
 from eeg.io import load_bci2k
-from eeg.preprocessing import bandpass_filter, label_components, rereference_average, run_ica
-from eeg.viz import plot_ica_components
+from eeg.preprocessing import (
+    bandpass_filter,
+    label_components,
+    make_epochs,
+    remove_artifacts,
+    rereference_average,
+    run_ica,
+)
+from eeg.viz import plot_before_after, plot_ica_components
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PATH = PROJECT_ROOT / "data/eeg/raw/MET000bGridFixedS001R02.dat"
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
+PLOT_CHANNELS = ["Cz", "Fz", "Pz"]
 
 
 def main() -> None:
@@ -26,6 +34,8 @@ def main() -> None:
     parser.add_argument("--h-freq", type=float, default=55.0)
     parser.add_argument("--filter-order", type=int, default=4)
     parser.add_argument("--n-components", type=int, default=24)
+    parser.add_argument("--eye-threshold", type=float, default=0.7)
+    parser.add_argument("--muscle-threshold", type=float, default=0.5)
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     args = parser.parse_args()
 
@@ -61,7 +71,6 @@ def main() -> None:
         )
     )
     print(f"ICLabel saved -> {labels_path}")
-
     for i, (label, proba) in enumerate(zip(labels["labels"], labels["y_pred_proba"])):
         print(f"  IC {i:02d}: {label} ({proba.max():.0%})")
 
@@ -72,6 +81,26 @@ def main() -> None:
         fig.savefig(out, dpi=150, bbox_inches="tight")
         plt.close(fig)
         print(f"  comp {i} -> {out}")
+
+    print(f"\nRemoving artifacts (eye>{args.eye_threshold:.0%}, muscle>{args.muscle_threshold:.0%})")
+    raw_clean, excluded = remove_artifacts(
+        raw, ica, labels,
+        eye_threshold=args.eye_threshold,
+        muscle_threshold=args.muscle_threshold,
+    )
+    print(f"  Excluded ICs: {excluded}")
+
+    print(f"Before/after traces: {PLOT_CHANNELS}")
+    fig = plot_before_after(raw, raw_clean, PLOT_CHANNELS)
+    out = args.output_dir / f"{stem}_before_after.png"
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  before/after -> {out}")
+
+    print("\nCreating epochs [0–3 s from stim onset]")
+    epochs = make_epochs(raw_clean)
+    print(f"  Epochs: {epochs}")
+    print(f"  Shape: {epochs.get_data().shape}  (trials × channels × samples)")
 
 
 if __name__ == "__main__":

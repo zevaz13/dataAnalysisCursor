@@ -2,28 +2,30 @@
 
 ## Current milestone — COMPLETE
 
-All three steps implemented and tested against `MET000bGridFixedS001R02.dat`.
-
 ### What was built
 
-**Step 1 — Granular signal exploration**
-- `src/eeg/viz.py`: `plot_channels(raw, channel_names, duration)`, `plot_channels_psd(raw, channel_names, fmax)`
-- `scripts/eeg/explore_channels.py` — CLI: `--path`, `--channels`, `--duration`, `--fmax`, `--output-dir`
-- `notebooks/eeg/explore_channels.ipynb`
+**Double-plot fix (`src/eeg/viz.py`)**
+- `plot_ica_components` now calls `plt.show()` after annotating figures (skipped on Agg).
+- With `%matplotlib inline`: plt.show() triggers flush_figures which displays and closes all
+  figures; the post-cell hook finds nothing left to render. One display per figure.
+- With Agg (scripts): plt.show() is skipped; figures stay open for savefig.
 
-**Step 2 — Preprocessing pipeline**
-- `src/eeg/preprocessing.py`: `bandpass_filter`, `rereference_average`, `run_ica`, `label_components`
-  - ICA: extended Infomax, `n_components=24`, `random_state=42`
-  - ICLabel backend: `onnxruntime`
-- `scripts/eeg/preprocess_pipeline.py` — saves ICA to `outputs/<stem>_ica.fif`, labels to `outputs/<stem>_iclabel.json`
-- `notebooks/eeg/preprocess_pipeline.ipynb`
+**Artifact removal (`src/eeg/preprocessing.py`)**
+- `remove_artifacts(raw, ica, labels, eye_threshold=0.7, muscle_threshold=0.5)`
+  → returns `(raw_clean, excluded_indices)`
+- On the test file: excludes IC 01 (eye blink 96%), IC 07 (muscle 52%), IC 09 (eye blink 85%)
 
-**Step 3 — ICA component visualization**
-- `src/eeg/viz.py`: `plot_ica_components(raw, ica, component_indices, labels=None)`
-  - annotates figure title with ICLabel label and confidence
-  - wired into `preprocess_pipeline.py` for components [0, 1]
+**Before/after visualization (`src/eeg/viz.py`)**
+- `plot_before_after(raw_before, raw_after, channel_names, duration=10.0)`
+  → two-column figure, one row per channel
 
-**Dependencies added**: `mne-icalabel==0.9.0`, `onnxruntime==1.26.0`
+**Epoch creation (`src/eeg/preprocessing.py`)**
+- `make_epochs(raw, tmin=0.0, tmax=3.0, event_id=1, baseline=None)`
+  → uses STI 014 rising edges; yields 104 × 33 × 1537 on test file
+
+**Updated pipeline**
+- `scripts/eeg/preprocess_pipeline.py` — full pipeline through epochs
+- `notebooks/eeg/preprocess_pipeline.ipynb` — steps 7–9 added
 
 ---
 

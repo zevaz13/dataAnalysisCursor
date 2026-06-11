@@ -1,1 +1,28 @@
-"""EEG data loading, inspection, and visualization."""
+"""EEG data loading, preprocessing, inspection, and visualization."""
+
+from eeg.io import load_bci2k
+from eeg.inspect import print_summary
+from eeg.preprocessing import bandpass_filter, label_components, rereference_average, run_ica
+from eeg.viz import (
+    plot_channels,
+    plot_channels_psd,
+    plot_ica_components,
+    plot_psd,
+    plot_raw_traces,
+    plot_stim_channel,
+)
+
+__all__ = [
+    "load_bci2k",
+    "print_summary",
+    "bandpass_filter",
+    "rereference_average",
+    "run_ica",
+    "label_components",
+    "plot_channels",
+    "plot_channels_psd",
+    "plot_ica_components",
+    "plot_psd",
+    "plot_raw_traces",
+    "plot_stim_channel",
+]

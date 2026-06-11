@@ -1,7 +1,65 @@
 """Plotting helpers for MNE Raw objects."""
 
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import mne
+
+
+def plot_channels(
+    raw: mne.io.BaseRaw,
+    channel_names: list[str],
+    duration: float = 10.0,
+) -> plt.Figure:
+    """Plot one or more channels by name."""
+    picks = [raw.ch_names.index(ch) for ch in channel_names]
+    n_samples = int(duration * raw.info["sfreq"])
+    data, times = raw[picks, :n_samples]
+
+    fig, axes = plt.subplots(len(picks), 1, figsize=(12, 0.8 * len(picks) + 1), sharex=True)
+    if len(picks) == 1:
+        axes = [axes]
+
+    for ax, ch_name, row in zip(axes, channel_names, data):
+        ax.plot(times, row)
+        ax.set_ylabel(ch_name, fontsize=8)
+        ax.tick_params(labelsize=7)
+
+    axes[-1].set_xlabel("Time (s)")
+    fig.suptitle("Channel traces")
+    fig.tight_layout()
+    return fig
+
+
+def plot_channels_psd(
+    raw: mne.io.BaseRaw,
+    channel_names: list[str],
+    fmax: float = 100.0,
+) -> plt.Figure:
+    """Plot PSD for one or more channels by name."""
+    return raw.compute_psd(picks=channel_names, fmax=fmax).plot()
+
+
+def plot_ica_components(
+    raw: mne.io.BaseRaw,
+    ica: mne.preprocessing.ICA,
+    component_indices: list[int],
+    labels: dict | None = None,
+) -> list[plt.Figure]:
+    """Plot properties for each ICA component, optionally annotating ICLabel results.
+
+    labels: dict returned by mne_icalabel.label_components, keys 'labels' and 'y_pred_proba'.
+    """
+    figures = []
+    for idx in component_indices:
+        figs = ica.plot_properties(raw, picks=[idx], show=False)
+        if labels is not None:
+            label = labels["labels"][idx]
+            prob = labels["y_pred_proba"][idx].max()
+            for fig in figs:
+                fig.suptitle(f"IC {idx}  |  {label} ({prob:.0%})", fontsize=10)
+        figures.extend(figs)
+    return figures
 
 
 def plot_raw_traces(

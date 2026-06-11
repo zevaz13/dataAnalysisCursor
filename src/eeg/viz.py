@@ -6,6 +6,18 @@ import matplotlib.pyplot as plt
 import mne
 
 
+def plot_montage(
+    raw: mne.io.BaseRaw,
+    show_names: bool = True,
+) -> plt.Figure:
+    """Plot channel locations from the montage.
+
+    show_names=True labels each sensor with its channel name.
+    show_names=False labels with channel indices instead.
+    """
+    return raw.plot_sensors(show_names=show_names)
+
+
 def plot_channels(
     raw: mne.io.BaseRaw,
     channel_names: list[str],

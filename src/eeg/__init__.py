@@ -13,6 +13,7 @@ from eeg.preprocessing import (
 from eeg.viz import (
     plot_before_after,
     plot_channels,
+    plot_montage,
     plot_channels_psd,
     plot_ica_components,
     plot_psd,
@@ -31,6 +32,7 @@ __all__ = [
     "make_epochs",
     "plot_before_after",
     "plot_channels",
+    "plot_montage",
     "plot_channels_psd",
     "plot_ica_components",
     "plot_psd",

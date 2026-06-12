@@ -19,10 +19,12 @@ from eeg.preprocessing import (
     rereference_average,
     run_ica,
 )
-from eeg.viz import plot_fbcca_stream
+from eeg.stimulus import build_stimulus_matrix, parse_sequence, split_baseline_task
+from eeg.viz import plot_baseline_boxplot, plot_fbcca_stream, plot_stimulus_heatmap
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PATH = PROJECT_ROOT / "data/eeg/raw/MET000bGridFixedS001R02.dat"
+DEFAULT_SEQUENCE = PROJECT_ROOT / "sequence.txt"
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 
 
@@ -47,6 +49,8 @@ def main() -> None:
                         help="Epoch start relative to stim onset (s)")
     parser.add_argument("--tmax", type=float, default=3.0,
                         help="Epoch end relative to stim onset (s)")
+    parser.add_argument("--sequence", type=Path, default=DEFAULT_SEQUENCE,
+                        help="Path to sequence.txt (default: project root)")
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     args = parser.parse_args()
 
@@ -103,12 +107,36 @@ def main() -> None:
     for i, s in enumerate(scores, start=1):
         print(f"  [{i:3d}] {s:.6f}")
 
-    # 7. Plot
+    # 7. FBCCA stream plot
     fig = plot_fbcca_stream(scores, freq=args.freq)
     out = args.output_dir / f"{stem}_fbcca_{args.freq}Hz.png"
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"\nFBCCA stream plot -> {out}")
+
+    # 8. Stimulus organisation (requires sequence.txt)
+    if not args.sequence.exists():
+        print(f"\nSequence file not found ({args.sequence}), skipping stimulus plots.")
+        return
+
+    print(f"\nParsing sequence: {args.sequence}")
+    sequence, red_array, green_array = parse_sequence(args.sequence)
+    baseline, task = split_baseline_task(scores)
+    print(f"  Baseline scores (epochs 1,2,103,104): {baseline.round(4)}")
+    print(f"  Task scores (epochs 3–102): n={len(task)}, mean={task.mean():.4f}")
+
+    fig = plot_baseline_boxplot(baseline)
+    out = args.output_dir / f"{stem}_fbcca_baseline.png"
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Baseline boxplot -> {out}")
+
+    matrix = build_stimulus_matrix(task, sequence)
+    fig = plot_stimulus_heatmap(matrix, red_array, green_array)
+    out = args.output_dir / f"{stem}_fbcca_heatmap.png"
+    fig.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Stimulus heatmap -> {out}")
 
 
 if __name__ == "__main__":

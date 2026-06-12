@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import mne
+import numpy as np
 
 
 def plot_montage(
@@ -164,8 +165,85 @@ def plot_psd(raw: mne.io.BaseRaw) -> plt.Figure:
     return raw.compute_psd().plot()
 
 
+def plot_baseline_boxplot(baseline_scores: np.ndarray) -> plt.Figure:
+    """Boxplot of the 4 baseline FBCCA epochs with individual points annotated.
+
+    Parameters
+    ----------
+    baseline_scores : np.ndarray, shape (4,)
+        FBCCA scores for epochs 1, 2, 103, 104 (in that order).
+    """
+    fig, ax = plt.subplots(figsize=(5, 5))
+    bp = ax.boxplot(
+        baseline_scores,
+        widths=0.4,
+        patch_artist=True,
+        boxprops=dict(facecolor="lightsteelblue", alpha=0.6),
+        medianprops=dict(color="navy", linewidth=2),
+        whiskerprops=dict(linestyle="--"),
+    )
+    labels = ["B1", "B2", "B3", "B4"]
+    x_jitter = np.array([1] * 4) + np.random.default_rng(0).uniform(-0.05, 0.05, 4)
+    for i, (x, y) in enumerate(zip(x_jitter, baseline_scores)):
+        ax.scatter(x, y, s=60, color="steelblue", zorder=4)
+        ax.annotate(labels[i], (x, y), xytext=(6, 2), textcoords="offset points", fontsize=8)
+    ax.set_xticks([1])
+    ax.set_xticklabels(["Baseline epochs"])
+    ax.set_ylabel("FBCCA score")
+    ax.set_title("Baseline FBCCA scores (n=4)")
+    fig.tight_layout()
+    return fig
+
+
+def plot_stimulus_heatmap(
+    matrix: np.ndarray,
+    red_array: np.ndarray,
+    green_array: np.ndarray,
+    title: str = "FBCCA score — red × green intensity grid",
+) -> plt.Figure:
+    """Heatmap of FBCCA scores on the 10×10 red × green PWM intensity grid.
+
+    Parameters
+    ----------
+    matrix : np.ndarray, shape (10, 10)
+        Output of build_stimulus_matrix. Rows = green intensity (low→high from bottom),
+        columns = red intensity (low→high from left).
+    red_array : np.ndarray, shape (10,)
+        Red channel PWM intensity tick labels (D/A units).
+    green_array : np.ndarray, shape (10,)
+        Green channel PWM intensity tick labels (D/A units).
+    """
+    fig, ax = plt.subplots(figsize=(8, 6))
+    im = ax.imshow(matrix, aspect="auto", origin="lower", cmap="viridis")
+    plt.colorbar(im, ax=ax, label="FBCCA score")
+
+    red_labels = [f"{v:.0f}" for v in red_array]
+    green_labels = [f"{v:.0f}" for v in green_array]
+
+    ax.set_xticks(np.arange(10))
+    ax.set_xticklabels(red_labels, rotation=45, ha="right", fontsize=8)
+    ax.set_yticks(np.arange(10))
+    ax.set_yticklabels(green_labels, fontsize=8)
+    ax.set_xlabel("Red intensity (D/A units)")
+    ax.set_ylabel("Green intensity (D/A units)")
+    ax.set_title(title)
+
+    # Annotate each cell with its score
+    vmin, vmax = matrix.min(), matrix.max()
+    midpoint = (vmin + vmax) / 2
+    for row in range(10):
+        for col in range(10):
+            val = matrix[row, col]
+            color = "white" if val < midpoint else "black"
+            ax.text(col, row, f"{val:.2f}", ha="center", va="center",
+                    fontsize=6, color=color)
+
+    fig.tight_layout()
+    return fig
+
+
 def plot_fbcca_stream(
-    scores: "np.ndarray",
+    scores: np.ndarray,
     freq: float | None = None,
     title: str | None = None,
 ) -> plt.Figure:
@@ -180,8 +258,6 @@ def plot_fbcca_stream(
     title : str | None
         Override the auto-generated title.
     """
-    import numpy as np
-
     n = len(scores)
     x = np.arange(1, n + 1)
 

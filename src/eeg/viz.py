@@ -162,3 +162,38 @@ def plot_stim_channel(
 def plot_psd(raw: mne.io.BaseRaw) -> plt.Figure:
     """Plot power spectral density."""
     return raw.compute_psd().plot()
+
+
+def plot_fbcca_stream(
+    scores: "np.ndarray",
+    freq: float | None = None,
+    title: str | None = None,
+) -> plt.Figure:
+    """Plot the FBCCA score stream across epochs.
+
+    Parameters
+    ----------
+    scores : np.ndarray, shape (n_epochs,)
+        Output of run_fbcca — one weighted score per epoch.
+    freq : float | None
+        Target frequency in Hz; included in the title if given.
+    title : str | None
+        Override the auto-generated title.
+    """
+    import numpy as np
+
+    n = len(scores)
+    x = np.arange(1, n + 1)
+
+    if title is None:
+        title = f"FBCCA score stream — {n} epochs" + (f" (target {freq} Hz)" if freq is not None else "")
+
+    fig, ax = plt.subplots(figsize=(12, 4))
+    ax.plot(x, scores, linewidth=1, color="steelblue")
+    ax.scatter(x, scores, s=18, color="steelblue", zorder=3)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("FBCCA score")
+    ax.set_title(title)
+    ax.set_xlim(0.5, n + 0.5)
+    fig.tight_layout()
+    return fig

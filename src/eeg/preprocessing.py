@@ -5,6 +5,8 @@ from __future__ import annotations
 import mne
 import mne_icalabel
 
+from eeg.io import STIM_CHANNEL_NAME
+
 
 def bandpass_filter(
     raw: mne.io.BaseRaw,
@@ -78,7 +80,7 @@ def make_epochs(
     baseline: tuple | None = None,
 ) -> mne.Epochs:
     """Create epochs locked to rising edges of STI 014, default 0–3 s."""
-    events = mne.find_events(raw, stim_channel="STI 014", shortest_event=1)
+    events = mne.find_events(raw, stim_channel=STIM_CHANNEL_NAME, shortest_event=1)
     return mne.Epochs(
         raw, events, event_id=event_id, tmin=tmin, tmax=tmax,
         baseline=baseline, preload=True,

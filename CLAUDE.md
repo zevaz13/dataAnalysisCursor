@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+You are a seasoned data scientist/analyst that specializes in biological time-series, especifically EEG, EMG. 
 
 ## Commands
 
@@ -11,7 +11,7 @@ uv run python scripts/eeg/load_and_inspect.py --path data/eeg/raw/<file>.dat
 uv run jupyter lab                                   # open notebooks
 ```
 
-Plots are saved to `outputs/` (auto-created). The default data file is `data/eeg/raw/MET000bGridFixedS001R02.dat`.
+Plots are saved to `outputs/` (auto-created). 
 
 ## Architecture
 

@@ -242,6 +242,51 @@ def plot_stimulus_heatmap(
     return fig
 
 
+def plot_time_frequency(
+    tf: np.ndarray,
+    frex: np.ndarray,
+    times: np.ndarray,
+    channel_names: list[str],
+    channel: str,
+    trial: int | None = None,
+    cmap: str = "RdBu_r",
+    title: str | None = None,
+) -> plt.Figure:
+    """Spectrogram (freq x time) for one channel.
+
+    Parameters
+    ----------
+    tf : np.ndarray, shape (n_channels, n_freqs, n_times, n_trials)
+        Output of eeg.timefreq.time_frequency_decompose (optionally baseline-normalized).
+    frex : np.ndarray, shape (n_freqs,)
+    times : np.ndarray, shape (n_times,)
+        Time vector in seconds.
+    channel_names : list[str]
+        Full channel name list, in the same order as tf's channel axis.
+    channel : str
+        Channel to plot.
+    trial : int | None
+        Trial index to plot. None averages across all trials.
+    """
+    ch_idx = channel_names.index(channel)
+    data = tf[ch_idx]  # (n_freqs, n_times, n_trials)
+    plot_data = data.mean(axis=-1) if trial is None else data[:, :, trial]
+
+    if title is None:
+        trial_label = "mean across trials" if trial is None else f"trial {trial}"
+        title = f"Time-frequency — {channel} ({trial_label})"
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    vmax = np.abs(plot_data).max()
+    im = ax.pcolormesh(times, frex, plot_data, cmap=cmap, shading="auto", vmin=-vmax, vmax=vmax)
+    plt.colorbar(im, ax=ax, label="Power")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Frequency (Hz)")
+    ax.set_title(title)
+    fig.tight_layout()
+    return fig
+
+
 def plot_fbcca_stream(
     scores: np.ndarray,
     freq: float | None = None,

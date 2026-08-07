@@ -1,6 +1,7 @@
 """EEG data loading, preprocessing, inspection, and visualization."""
 
 from eeg.bci2k_meta import digital_input_to_events
+from eeg.blue_stimulus import load_blue_levels
 from eeg.eeglab_io import load_eeglab_epochs
 from eeg.fbcca import run_fbcca
 from eeg.io import load_bci2k
@@ -14,6 +15,7 @@ from eeg.preprocessing import (
     rereference_average,
     run_ica,
 )
+from eeg.psd import combine_channels, compute_psd
 from eeg.timefreq import baseline_normalize, compute_baseline_stats, time_frequency_decompose
 from eeg.viz import (
     plot_baseline_boxplot,
@@ -32,6 +34,7 @@ from eeg.viz import (
 
 __all__ = [
     "digital_input_to_events",
+    "load_blue_levels",
     "load_eeglab_epochs",
     "run_fbcca",
     "load_bci2k",
@@ -45,6 +48,8 @@ __all__ = [
     "label_components",
     "remove_artifacts",
     "make_epochs",
+    "combine_channels",
+    "compute_psd",
     "time_frequency_decompose",
     "compute_baseline_stats",
     "baseline_normalize",

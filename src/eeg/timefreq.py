@@ -119,9 +119,10 @@ def baseline_normalize(
     tf : np.ndarray, shape (n_channels, n_freqs, n_times, n_trials)
     baseline_mean, baseline_std : np.ndarray, shape (n_channels, n_freqs)
         Output of compute_baseline_stats.
-    method : {"percent", "db", "zscore"}
+    method : {"percent", "db", "log", "zscore"}
         percent : (tf - mean) / mean * 100
         db      : 10 * log10(tf / mean)
+        log     : log(tf / mean)  (natural log of the baseline ratio)
         zscore  : (tf - mean) / std
     """
     mean = baseline_mean[:, :, None, None]
@@ -129,7 +130,11 @@ def baseline_normalize(
         return (tf - mean) / mean * 100
     if method == "db":
         return 10 * np.log10(tf / mean)
+    if method == "log":
+        return np.log(tf / mean)
     if method == "zscore":
         std = baseline_std[:, :, None, None]
         return (tf - mean) / std
-    raise ValueError(f"Unknown method {method!r}, expected 'percent', 'db', or 'zscore'")
+    raise ValueError(
+        f"Unknown method {method!r}, expected 'percent', 'db', 'log', or 'zscore'"
+    )

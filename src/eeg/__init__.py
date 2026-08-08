@@ -15,7 +15,7 @@ from eeg.preprocessing import (
     rereference_average,
     run_ica,
 )
-from eeg.psd import combine_channels, compute_psd
+from eeg.psd import band_power, combine_channels, compute_psd
 from eeg.timefreq import baseline_normalize, compute_baseline_stats, time_frequency_decompose
 from eeg.viz import (
     plot_baseline_boxplot,
@@ -25,10 +25,15 @@ from eeg.viz import (
     plot_channels_psd,
     plot_fbcca_stream,
     plot_ica_components,
+    plot_band_power_vs_trial,
     plot_psd,
+    plot_psd_grid,
     plot_raw_traces,
     plot_stim_channel,
     plot_stimulus_heatmap,
+    plot_tf_grid,
+    plot_time_course_grid,
+    plot_time_course_overlay,
     plot_time_frequency,
 )
 
@@ -48,6 +53,7 @@ __all__ = [
     "label_components",
     "remove_artifacts",
     "make_epochs",
+    "band_power",
     "combine_channels",
     "compute_psd",
     "time_frequency_decompose",
@@ -60,9 +66,14 @@ __all__ = [
     "plot_montage",
     "plot_channels_psd",
     "plot_ica_components",
+    "plot_band_power_vs_trial",
     "plot_psd",
+    "plot_psd_grid",
     "plot_raw_traces",
     "plot_stim_channel",
     "plot_stimulus_heatmap",
+    "plot_tf_grid",
+    "plot_time_course_grid",
+    "plot_time_course_overlay",
     "plot_time_frequency",
 ]

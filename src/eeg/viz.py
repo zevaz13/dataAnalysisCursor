@@ -250,6 +250,8 @@ def plot_time_frequency(
     channel: str,
     trial: int | None = None,
     cmap: str = "RdBu_r",
+    vmin: float | None = None,
+    vmax: float | None = None,
     title: str | None = None,
 ) -> plt.Figure:
     """Spectrogram (freq x time) for one channel.
@@ -267,6 +269,11 @@ def plot_time_frequency(
         Channel to plot.
     trial : int | None
         Trial index to plot. None averages across all trials.
+    cmap : str
+        Colormap name.
+    vmin, vmax : float | None
+        Color axis limits. Default: symmetric around 0 (vmin=-vmax=-|data|.max()),
+        matching the diverging colormap's default. Pass either or both to override.
     """
     ch_idx = channel_names.index(channel)
     data = tf[ch_idx]  # (n_freqs, n_times, n_trials)
@@ -276,13 +283,277 @@ def plot_time_frequency(
         trial_label = "mean across trials" if trial is None else f"trial {trial}"
         title = f"Time-frequency — {channel} ({trial_label})"
 
+    if vmin is None or vmax is None:
+        auto = np.abs(plot_data).max()
+        vmin = -auto if vmin is None else vmin
+        vmax = auto if vmax is None else vmax
+
     fig, ax = plt.subplots(figsize=(10, 5))
-    vmax = np.abs(plot_data).max()
-    im = ax.pcolormesh(times, frex, plot_data, cmap=cmap, shading="auto", vmin=-vmax, vmax=vmax)
+    im = ax.pcolormesh(times, frex, plot_data, cmap=cmap, shading="auto", vmin=vmin, vmax=vmax)
     plt.colorbar(im, ax=ax, label="Power")
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Frequency (Hz)")
     ax.set_title(title)
+    fig.tight_layout()
+    return fig
+
+
+def plot_tf_grid(
+    tf: np.ndarray,
+    frex: np.ndarray,
+    times: np.ndarray,
+    channel_names: list[str],
+    channel: str,
+    trial_idx: np.ndarray | None = None,
+    symmetric: bool = False,
+    cmap: str | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    n_cols: int = 5,
+    title: str | None = None,
+) -> plt.Figure:
+    """Grid of per-trial time-frequency spectrograms for one channel.
+
+    Parameters
+    ----------
+    tf : np.ndarray, shape (n_channels, n_freqs, n_times, n_trials)
+        Output of eeg.timefreq.time_frequency_decompose (raw or baseline-normalized).
+    frex, times : np.ndarray
+    channel_names : list[str]
+    channel : str
+    trial_idx : np.ndarray | None
+        Trial indices to include (e.g. stimulus-only). None includes every trial.
+    symmetric : bool
+        True for baseline-normalized data: diverging colormap (default "RdBu_r"),
+        auto vmin/vmax symmetric around 0. False (default) for raw power:
+        sequential colormap (default "viridis"), auto vmin=0.
+    cmap, vmin, vmax : color axis controls
+        All three override the `symmetric`-based defaults; pass any subset.
+    n_cols : int
+    title : str | None
+    """
+    ch_idx = channel_names.index(channel)
+    data = tf[ch_idx]  # (n_freqs, n_times, n_trials)
+    if trial_idx is not None:
+        data = data[:, :, trial_idx]
+    n_trials = data.shape[-1]
+    n_rows = int(np.ceil(n_trials / n_cols))
+    trial_labels = trial_idx if trial_idx is not None else np.arange(n_trials)
+
+    if cmap is None:
+        cmap = "RdBu_r" if symmetric else "viridis"
+    if vmin is None or vmax is None:
+        if symmetric:
+            auto = np.abs(data).max()
+            vmin = -auto if vmin is None else vmin
+            vmax = auto if vmax is None else vmax
+        else:
+            vmin = 0.0 if vmin is None else vmin
+            vmax = data.max() if vmax is None else vmax
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(2.8 * n_cols, 2.2 * n_rows), sharex=True, sharey=True
+    )
+    axes = np.atleast_1d(axes).ravel()
+
+    im = None
+    for i in range(n_trials):
+        ax = axes[i]
+        im = ax.pcolormesh(
+            times, frex, data[:, :, i], cmap=cmap, vmin=vmin, vmax=vmax, shading="auto"
+        )
+        ax.set_title(f"trial {trial_labels[i]}", fontsize=8)
+        ax.tick_params(labelsize=6)
+
+    for ax in axes[n_trials:]:
+        ax.axis("off")
+
+    fig.suptitle(title or f"Time-frequency per trial — {channel}")
+    fig.supxlabel("Time (s)")
+    fig.supylabel("Frequency (Hz)")
+    fig.colorbar(im, ax=axes[:n_trials].tolist(), shrink=0.6, label="Power")
+    return fig
+
+
+def plot_time_course_grid(
+    time_courses: np.ndarray,
+    times: np.ndarray,
+    channel: str,
+    freq_label: str,
+    trial_idx: np.ndarray | None = None,
+    n_cols: int = 5,
+) -> plt.Figure:
+    """Grid of per-trial time courses (e.g. frequency-collapsed TF power), one subplot per trial.
+
+    Parameters
+    ----------
+    time_courses : np.ndarray, shape (n_times, n_trials)
+        E.g. output of eeg.psd.band_power applied to a channel's TF slice.
+    times : np.ndarray, shape (n_times,)
+    channel : str
+        Used only in the title.
+    freq_label : str
+        Used only in the title, e.g. "10 Hz" or "9-11 Hz".
+    trial_idx : np.ndarray | None
+        Trial indices corresponding to time_courses' trial axis, used as subplot
+        titles. None labels them 0..n_trials-1.
+    n_cols : int
+    """
+    n_trials = time_courses.shape[-1]
+    n_rows = int(np.ceil(n_trials / n_cols))
+    trial_labels = trial_idx if trial_idx is not None else np.arange(n_trials)
+
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(2.6 * n_cols, 1.8 * n_rows), sharex=True, sharey=True
+    )
+    axes = np.atleast_1d(axes).ravel()
+
+    for i in range(n_trials):
+        ax = axes[i]
+        ax.plot(times, time_courses[:, i], linewidth=1)
+        ax.axhline(0, color="grey", linewidth=0.5, linestyle="--")
+        ax.set_title(f"trial {trial_labels[i]}", fontsize=8)
+        ax.tick_params(labelsize=6)
+
+    for ax in axes[n_trials:]:
+        ax.axis("off")
+
+    fig.suptitle(f"{channel} — {freq_label} vs. time")
+    fig.supxlabel("Time (s)")
+    fig.supylabel("Power")
+    fig.tight_layout()
+    return fig
+
+
+def plot_time_course_overlay(
+    time_courses: np.ndarray,
+    times: np.ndarray,
+    channel: str,
+    freq_label: str,
+    trial_idx: np.ndarray | None = None,
+    cmap: str = "viridis",
+) -> plt.Figure:
+    """All trials' time courses overlaid on one axes, colored by trial index.
+
+    Parameters
+    ----------
+    time_courses : np.ndarray, shape (n_times, n_trials)
+        E.g. output of eeg.psd.band_power applied to a channel's TF slice.
+    times : np.ndarray, shape (n_times,)
+    channel : str
+        Used only in the title.
+    freq_label : str
+        Used only in the title, e.g. "10 Hz" or "9-11 Hz".
+    trial_idx : np.ndarray | None
+        Trial indices corresponding to time_courses' trial axis, used for the
+        color scale and colorbar. None uses 0..n_trials-1.
+    cmap : str
+        Colormap used for the trial-index color gradient.
+    """
+    n_trials = time_courses.shape[-1]
+    trial_labels = trial_idx if trial_idx is not None else np.arange(n_trials)
+    colormap = plt.get_cmap(cmap)
+    norm = plt.Normalize(vmin=trial_labels.min(), vmax=trial_labels.max())
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for i in range(n_trials):
+        ax.plot(times, time_courses[:, i], color=colormap(norm(trial_labels[i])), linewidth=1)
+
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+    fig.colorbar(sm, ax=ax, label="Trial")
+    ax.axhline(0, color="grey", linewidth=0.5, linestyle="--")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Power")
+    ax.set_title(f"{channel} — {freq_label} vs. time, all trials")
+    fig.tight_layout()
+    return fig
+
+
+def plot_psd_grid(
+    psd: np.ndarray,
+    freqs: np.ndarray,
+    channel_names: list[str],
+    channel: str = "Oz",
+    freq_max: float = 40.0,
+    n_cols: int = 5,
+) -> plt.Figure:
+    """Grid of per-trial PSD subplots for one channel, one subplot per trial.
+
+    Parameters
+    ----------
+    psd : np.ndarray, shape (n_channels, n_freqs, n_trials)
+        Output of eeg.psd.compute_psd.
+    freqs : np.ndarray, shape (n_freqs,)
+    channel_names : list[str]
+        Full channel name list, in the same order as psd's channel axis.
+    channel : str
+        Channel to plot.
+    freq_max : float
+        Upper x-axis limit (Hz); also excludes higher bins from the y-axis autoscale.
+    n_cols : int
+        Number of subplot columns.
+    """
+    ch_idx = channel_names.index(channel)
+    spectra = psd[ch_idx]  # (n_freqs, n_trials)
+    n_trials = spectra.shape[1]
+    n_rows = int(np.ceil(n_trials / n_cols))
+
+    mask = freqs <= freq_max
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(2.6 * n_cols, 2.0 * n_rows), sharex=True, sharey=True
+    )
+    axes = np.atleast_1d(axes).ravel()
+
+    for trial in range(n_trials):
+        ax = axes[trial]
+        ax.semilogy(freqs[mask], spectra[mask, trial])
+        ax.set_title(f"trial {trial}", fontsize=8)
+        ax.tick_params(labelsize=6)
+
+    for ax in axes[n_trials:]:
+        ax.axis("off")
+
+    fig.suptitle(f"PSD per trial — {channel}")
+    fig.supxlabel("Frequency (Hz)")
+    fig.supylabel("PSD")
+    fig.tight_layout()
+    return fig
+
+
+def plot_band_power_vs_trial(
+    band_values: np.ndarray,
+    freq_label: str,
+    channel: str = "Oz",
+    baseline_trial_idx: np.ndarray | None = None,
+) -> plt.Figure:
+    """Band power at one frequency (or range) as a function of trial number.
+
+    Parameters
+    ----------
+    band_values : np.ndarray, shape (n_trials,)
+        Output of eeg.psd.band_power.
+    freq_label : str
+        Label for the title, e.g. "10 Hz" or "9-11 Hz".
+    channel : str
+    baseline_trial_idx : np.ndarray | None
+        Trial indices to highlight as baseline trials (boolean mask or integer array).
+    """
+    n = len(band_values)
+    x = np.arange(n)
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.plot(x, band_values, color="steelblue", linewidth=1, zorder=2)
+    ax.scatter(x, band_values, color="steelblue", s=25, zorder=3, label="stimulus")
+    if baseline_trial_idx is not None:
+        ax.scatter(
+            x[baseline_trial_idx], band_values[baseline_trial_idx],
+            color="firebrick", s=40, zorder=4, label="baseline",
+        )
+        ax.legend()
+    ax.set_xlabel("Trial")
+    ax.set_ylabel("PSD")
+    ax.set_title(f"{channel} power at {freq_label} vs. trial")
+    ax.set_xticks(x)
     fig.tight_layout()
     return fig
 
